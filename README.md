@@ -1,5 +1,3 @@
-# Matrix_MultiplierNxN
-UVM testbench for a parameterised N×N systolic-array matrix multiplier. It verifies the design at module level and inside a dual-clock FIFO sub-system, using a golden-model scoreboard, constrained-random stimulus and functional coverage.
 # UVM Verification of the N x N Systolic Array and Sub-System
 
 This design-verification project provides a UVM testbench for the systolic array (module level) and the sub-system with FIFOs and two clocks (sub-system level).
@@ -11,6 +9,7 @@ This design-verification project provides a UVM testbench for the systolic array
 | `testbench.sv` | The UVM testbench: interfaces, the `mm_tb_pkg` package (transaction, sequences, agents, golden model, scoreboard, coverage, environments, tests) and the top module `tb_top` |
 | `design.sv` | A cycle-accurate SystemVerilog model of the DUT (`systolic_array`, `sub_sys` and their sub-blocks). It is the optional "cycle accuracy performance/function model". It also lets the testbench run before the real RTL exists. |
 | `README.md` | This document: how to run, DV architecture, verification plan, assumptions |
+| `dv_architecture.png` | DV architecture diagram (section 3). Not needed to run on EDA Playground |
 
 ## 2. Running on EDA Playground
 
@@ -61,6 +60,10 @@ EPWave cannot display unpacked arrays, so `tb_top` provides one wire per element
 
 ## 3. DV architecture
 
+![DV architecture: the test, the module-level and sub-system environments, the interfaces and the two DUTs](dv_architecture.png)
+
+The diagram above is `dv_architecture.png` in this package. The text tree below shows the same structure for viewers that do not display images.
+
 ```
  tb_top
   |-- clk_rst_if            programmable clk / sys_clk / sr_clk (period and phase, changeable at run time)
@@ -108,7 +111,7 @@ Only the pin-level drivers and monitors are level-specific. A failure in the sub
 |---|---|---|---|---|
 | F1 | C = A x B for every matrix pair, signed, wrapping modulo 2^(2*DIN_WIDTH) | Scoreboard vs golden model, element by element | all | M bins, data patterns |
 | F2 | Inner dimension M = 1..256 (module: random per matrix; sub-system: `M_minus_one` 0..255) | Scoreboard | `sa_rand_test`, `sa_corner_test`, `ss_m_sweep_test`, `mm_full_test` | `cp_m`, M<N / M=N / M>N |
-| F3 | Streaming throughput: one C matrix every M clocks (M >= N), no bubbles | `out_valid` spacing must equal M | `sa_b2b_test`, `mm_full_test` | back-to-back x M relation |
+| F3 | Streaming throughput: one C matrix every M clocks (M >= N), no bubbles | `sa_b2b_test` fails unless every `out_valid` spacing is exactly N clocks (64 pairs, M = N, no gaps). In the other tests, the `SA` and `SS_ARR` scoreboards measure the spacing and print its range in the log (not a pass/fail check) | `sa_b2b_test` (checked); all other tests, including `mm_full_test`, report it | back-to-back x M relation (`x_rel_b2b`) |
 | F4 | Fixed latency `in_valid` to `out_valid` (2N in the model) | Scoreboard latency check (`+SA_LATENCY`) | all module level, `SS_ARR` | none |
 | F5 | `c_dout` = 0 when no result is being returned | Monitor idle-zero check | all | none |
 | F6 | Handshake rules: `in_valid` spacing (P3), no X/Z after reset, no overlapping result windows | SVA in `sa_if` / `ss_if`, monitor checks | all | none |
